@@ -1,3 +1,4 @@
+import google.generativeai as genai
 import os
 import streamlit as st
 from dotenv import load_dotenv
@@ -5,6 +6,7 @@ import openai
 
 # Load environment variables
 load_dotenv()
+genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
 # Set OpenAI API key
 openai.api_key = os.getenv("OPENAI_API_KEY")
@@ -80,16 +82,24 @@ def main():
         system_content = f"You are an experienced HR interviewer with a background in IT, specializing in {position} interviews. Make suggestions to the user on how to better answer the interview questions, provide practice to the user as if the interviewer is asking the same questions back and forth, and then finally make suggestions on how to better answer the questions. Only after the user has answered a question can you ask the next question, and only when the user says it's over can you summarize how to improve the answer."
 
         # Use the new Chat API
-        response = openai.ChatCompletion.create(
-            model="Gemini Pro",  # or "gpt-4" if available
-            messages=[
-                {"role": "system", "content": system_content},
-                {"role": "user", "content": query}
-            ],
-            temperature=0.7,
-            max_tokens=150,
+        model=genai.GenerativeModel("gemini-1.5-flash")  # or "gpt-4" if available
+        response = model.generate_content(
+            "Ask me anything to start your interview practice!",
+            generation_config=genai.types.GenerationConfig(
+                candidate_count=1,
+                stop_sequences=["x"],
+                max_output_tokens=20,
+                temperature=3.0,
+            )
         )
-        return response.choices[0].message["content"].strip()
+    
+        
+            
+        
+        temperature=0.7,
+        max_tokens=150,
+        
+        #return response.choices[0].message["content"].strip()
 
     # Initialize session state if not already done
     if "messages" not in st.session_state:
@@ -153,6 +163,5 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 
