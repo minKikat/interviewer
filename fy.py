@@ -142,39 +142,28 @@ def main():
             with st.chat_message("assistant"):
                 st.markdown(response)
 
-            # Check if the answer is relevant
-            if "not related" in response:
-                # If the answer is not relevant, do not proceed to next question
-                st.session_state.valid_answer = False
-                return  # Wait for the user to provide a relevant answer
+            # Clear current question to allow the next one to be asked
+            st.session_state.current_question = None
 
-            # If the answer is relevant, proceed to the next question
-            st.session_state.valid_answer = True
+        # Only ask the next question if the current question has been answered
+        if not st.session_state.current_question and len(st.session_state.asked_questions) < len(job_questions[selected_position]):
+            next_question = random.choice(
+                [q for q in job_questions[selected_position] if q not in st.session_state.asked_questions]
+            )
+            st.session_state.current_question = next_question
+            st.session_state.asked_questions.add(next_question)
 
-        # Ask the next question only if the previous answer was valid
-        if st.session_state.valid_answer:
-            # Only ask the next question if the current question has been answered
-            if not st.session_state.current_question and len(st.session_state.asked_questions) < len(job_questions[selected_position]):
-                next_question = random.choice(
-                    [q for q in job_questions[selected_position] if q not in st.session_state.asked_questions]
-                )
-                st.session_state.current_question = next_question
-                st.session_state.asked_questions.add(next_question)
+            # Display the current question
+            st.session_state.messages.append({"role": "assistant", "content": st.session_state.current_question})
+            with st.chat_message("assistant"):
+                st.markdown(st.session_state.current_question)
 
-                # Display the current question
-                st.session_state.messages.append({"role": "assistant", "content": st.session_state.current_question})
-                with st.chat_message("assistant"):
-                    st.markdown(st.session_state.current_question)
-
-                # Reset the valid_answer flag after asking the next question
-                st.session_state.valid_answer = False
-
-            elif len(st.session_state.asked_questions) >= len(job_questions[selected_position]):
-                st.session_state.messages.append(
-                    {"role": "assistant", "content": "You have completed all the questions for this position!"}
-                )
-                with st.chat_message("assistant"):
-                    st.markdown("You have completed all the questions for this position!")
+        elif len(st.session_state.asked_questions) >= len(job_questions[selected_position]):
+            st.session_state.messages.append(
+                {"role": "assistant", "content": "You have completed all the questions for this position!"}
+            )
+            with st.chat_message("assistant"):
+                 st.markdown("You have completed all the questions for this position!")
 
     # User input
     query = st.chat_input("Your response here...")
