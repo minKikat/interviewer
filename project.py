@@ -89,14 +89,14 @@ def main():
                 candidate_count=1,
                 stop_sequences=["x"],
                 max_output_tokens=20,
-                temperature=3.0,
+                temperature=2.0,
             )
         )
     
         
             
         
-        temperature=0.7,
+        temperature=0.0,
         max_tokens=150,
         
         #return response.choices[0].message["content"].strip()
