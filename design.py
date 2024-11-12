@@ -138,10 +138,10 @@ def main():
     """
     <style>
         .main {
-            background-color: #E0F7FA; /* 淡蓝色背景 */
+            background-color: #FFBAAC; /* 淡蓝色背景 */
         }
         .css-1kyxreq {
-            background-color: #E0F7FA; /* 调整聊天框的背景颜色 */
+            background-color: #759148; /* 调整聊天框的背景颜色 */
         }
         .stMarkdown {
             color: #000080; /* 深蓝色文字 */
