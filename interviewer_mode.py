@@ -35,6 +35,12 @@ class RateLimiter:
         self.interval = 60 / calls_per_minute
         self.last_call = 0
 
+    def can_make_call(self):
+        """Check if a call can be made based on the rate limit"""
+        now = time.time()
+        time_since_last_call = now - self.last_call
+        return time_since_last_call >= self.interval
+
     def __call__(self, func):
         @wraps(func)
         def wrapper(*args, **kwargs):
