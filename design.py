@@ -137,79 +137,46 @@ def main():
     st.markdown(
     """
     <style>
-<<<<<<< HEAD
-        .main {
-            background-color: #FFBAAC; /* 淡蓝色背景 */
-        }
-        .css-1kyxreq {
-            background-color: #759148; /* 调整聊天框的背景颜色 */
-=======
-        /* Adapt to light and dark mode */
-        :root {
-            color-scheme: light dark;
-            --bg-color-light: #f0f4c3;
-            --bg-color-dark: #263238;
-            --text-color-light: #00796b;
-            --text-color-dark: #cfd8dc;
-            --card-bg-color-light: #fff3e0;
-            --card-bg-color-dark: #37474f;
-            --input-border-light: #ffab91;
-            --input-border-dark: #546e7a;
-        }
-
-        /* Overall app background */
+        /* General Background */
         .stApp {
-            background: var(--bg-color-light);
->>>>>>> ac333932a421457062a914f3639c533105546aac
-        }
-        @media (prefers-color-scheme: dark) {
-            .stApp {
-                background: var(--bg-color-dark);
-            }
+            background-color: var(--background-color, #f0f4c3);
         }
 
-        /* Chat message styling */
+        /* Chat Message Background */
         .stChatMessage {
-            background: var(--card-bg-color-light);
+            background-color: var(--chat-background-color, #fff3e0);
             border-radius: 8px;
             padding: 10px;
             margin: 10px 0;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        @media (prefers-color-scheme: dark) {
-            .stChatMessage {
-                background: var(--card-bg-color-dark);
-                color: var(--text-color-dark);
-            }
+            color: var(--text-color, #004d40);
         }
 
-        /* Input field styling */
+        /* Input Field */
         .stTextInput {
-            border: 2px solid var(--input-border-light);
+            border: 2px solid #ffab91;
             border-radius: 8px;
             padding: 8px;
-        }
-        @media (prefers-color-scheme: dark) {
-            .stTextInput {
-                border-color: var(--input-border-dark);
-            }
+            color: var(--text-color, #004d40);
         }
 
-        /* Header and chat text colors */
+        /* Title Text */
         .stMarkdown h1 {
-            color: var(--text-color-light);
+            color: var(--title-color, #00796b);
         }
-        @media (prefers-color-scheme: dark) {
-            .stMarkdown h1 {
-                color: var(--text-color-dark);
-            }
-        }
+
+        /* Chat Text */
         .stMarkdown p {
-            color: var(--text-color-light);
+            color: var(--text-color, #004d40);
         }
+
+        /* Dark Mode Styling */
         @media (prefers-color-scheme: dark) {
-            .stMarkdown p {
-                color: var(--text-color-dark);
+            .stApp {
+                --background-color: #1e1e1e;
+                --chat-background-color: #2e2e2e;
+                --text-color: #e0e0e0;
+                --title-color: #80cbc4;
             }
         }
     </style>
