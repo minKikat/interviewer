@@ -137,6 +137,7 @@ def main():
     st.markdown(
     """
     <style>
+<<<<<<< HEAD
     /* Apply a gradient to the entire background (html, body, and app) */
     html, body, .stApp {
         background: linear-gradient(to bottom right, #F0E68C, #F08080);  /* Gradient from top-left to bottom-right */
@@ -214,6 +215,82 @@ def main():
             background-color: #FFEB3B !important;
             border-radius: 10px;
             padding: 10px;
+=======
+<<<<<<< HEAD
+        .main {
+            background-color: #FFBAAC; /* 淡蓝色背景 */
+        }
+        .css-1kyxreq {
+            background-color: #759148; /* 调整聊天框的背景颜色 */
+=======
+        /* Adapt to light and dark mode */
+        :root {
+            color-scheme: light dark;
+            --bg-color-light: #f0f4c3;
+            --bg-color-dark: #263238;
+            --text-color-light: #00796b;
+            --text-color-dark: #cfd8dc;
+            --card-bg-color-light: #fff3e0;
+            --card-bg-color-dark: #37474f;
+            --input-border-light: #ffab91;
+            --input-border-dark: #546e7a;
+        }
+
+        /* Overall app background */
+        .stApp {
+            background: var(--bg-color-light);
+>>>>>>> ac333932a421457062a914f3639c533105546aac
+        }
+        @media (prefers-color-scheme: dark) {
+            .stApp {
+                background: var(--bg-color-dark);
+            }
+        }
+
+        /* Chat message styling */
+        .stChatMessage {
+            background: var(--card-bg-color-light);
+            border-radius: 8px;
+            padding: 10px;
+            margin: 10px 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        @media (prefers-color-scheme: dark) {
+            .stChatMessage {
+                background: var(--card-bg-color-dark);
+                color: var(--text-color-dark);
+            }
+        }
+
+        /* Input field styling */
+        .stTextInput {
+            border: 2px solid var(--input-border-light);
+            border-radius: 8px;
+            padding: 8px;
+        }
+        @media (prefers-color-scheme: dark) {
+            .stTextInput {
+                border-color: var(--input-border-dark);
+            }
+        }
+
+        /* Header and chat text colors */
+        .stMarkdown h1 {
+            color: var(--text-color-light);
+        }
+        @media (prefers-color-scheme: dark) {
+            .stMarkdown h1 {
+                color: var(--text-color-dark);
+            }
+        }
+        .stMarkdown p {
+            color: var(--text-color-light);
+        }
+        @media (prefers-color-scheme: dark) {
+            .stMarkdown p {
+                color: var(--text-color-dark);
+            }
+>>>>>>> b8bf1dc00ceca7a0a2ecfe617d14d89716ec793b
         }
 
         .stChatInput input {
