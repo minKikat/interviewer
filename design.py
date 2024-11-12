@@ -187,8 +187,11 @@ def main():
     /* Ensure chat input box outer container background is styled */
     .stChatInput div {
         background-color: #FFEB3B !important;
-        border-radius: 5px;
-        padding: 10px;
+        height: max;
+        width: max;
+        border-radius: 5000px;
+        padding: 8px;
+        margin: 0px;
     }
 
     /* Add a distinct background color for the main content area */
