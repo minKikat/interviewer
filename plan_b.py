@@ -77,7 +77,7 @@ def analyze_job_description(job_description_text):
     return response.text.strip()
 
 def extract_keywords(text):
-    """提取文本中的关键词（使用简单的词频分析或正则表达式）"""
+    """extract keywords from text"""
     keywords = re.findall(r'\b\w+\b', text.lower())
     return keywords
 
@@ -132,113 +132,69 @@ def analyze_answer(query, context):
     )
     return response.text.strip()
 
+def analyze_interview_performance(responses):
+    """Analyzes overall interview performance and provides a summary with score"""
+    prompt = f"""
+    As an HR interviewer, analyze the following interview responses and provide:
+    1. An overall score out of 100
+    2. A summary of strengths and weaknesses
+    3. Key areas for improvement
+    
+    Interview Responses:
+    {responses}
+    
+    Format the response as:
+    Score: [X]/100
+    
+    Overall Assessment:
+    [Summary paragraph]
+    
+    Strengths:
+    - [Point 1]
+    - [Point 2]
+    
+    Areas for Improvement:
+    - [Point 1]
+    - [Point 2]
+    
+    Recommendations:
+    - [Point 1]
+    - [Point 2]
+    """
+    
+    model = genai.GenerativeModel("gemini-1.5-flash")
+    response = model.generate_content(
+        prompt,
+        generation_config=genai.types.GenerationConfig(
+            candidate_count=1,
+            max_output_tokens=1000,
+            temperature=0.5,
+        )
+    )
+    return response.text.strip()
+
+def reset_all_states():
+    # List of ALL session state keys to reset, including file uploads
+    keys_to_reset = [
+        'messages',
+        'current_question',
+        'asked_questions',
+        'questions_asked',
+        'user_responses',
+        'interview_completed',
+        'resume_file',
+        'job_description_file',
+        'resume_uploader',  # Clear file uploader state
+        'jd_uploader'      # Clear file uploader state
+    ]
+    
+    # Reset each key
+    for key in keys_to_reset:
+        if key in st.session_state:
+            del st.session_state[key]
+
 def main():
     st.set_page_config(page_title="Interviewer ChatBot AI", page_icon="🤖", layout="wide")
-    st.markdown(
-    """
-    <style>
-    /* Apply a gradient to the entire background (html, body, and app) */
-    html, body, .stApp {
-        background: linear-gradient(to bottom right, #F0E68C, #F08080);  /* Gradient from top-left to bottom-right */
-        color: #004d40;  /* Text color */
-        height: 100%;
-        width: 100%;
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-    }
-
-    /* Ensure all Streamlit containers (header, toolbar, app view) have transparent backgrounds */
-    [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stFooter"] {
-        background: transparent !important;
-    }
-
-    /* Style the sidebar background */
-    .stSidebar {
-        background: #FFDAB9;  /* Light orange color for sidebar */
-        padding: 20px;
-        border-right: 2px solid #FFAB91;
-    }
-
-    /* Style the footer to match the background */
-    [data-testid="stFooter"] {
-        background: #FFDAB9;  /* Light orange background for footer */
-        color: #004d40;  /* Footer text color */
-    }
-
-    /* Style the chat box container with background color */
-    .stChatInput {
-        background-color: #FFEB3B !important;  /* Light yellow background for chat input box */
-        border-radius: 10px;  /* Rounded corners for the chat box */
-        padding: 10px;
-        margin-top: 20px;  /* Optional: space above the chat input */
-    }
-
-    /* Customize the chat input text box */
-    .stChatInput input {
-        background-color: #FFEB3B !important;  /* Light yellow background for the input box */
-        color: #004d40 !important;  /* Text color */
-        border-radius: 5px;  /* Rounded corners for the input field */
-        padding: 10px;
-        font-size: 16px;
-        border: none;  /* Remove default border */
-    }
-
-    /* Ensure chat input box outer container background is styled */
-    .stChatInput div {
-        background-color: #FFEB3B !important;
-        border-radius: 5px;
-        padding: 10px;
-    }
-
-    /* Add a distinct background color for the main content area */
-    .stContainer {
-        background-color: #FFF0E1;  /* Light peach color for content area */
-        border-radius: 10px;
-        padding: 20px;
-        margin-top: 20px;
-    }
-
-    /* Dark Mode Styling */
-    @media (prefers-color-scheme: dark) {
-        html, body, .stApp {
-            background: linear-gradient(to bottom right, #2e2e2e, #1e1e1e);  /* Dark gradient */
-            color: #e0e0e0;  /* Light text color */
-        }
-        .stSidebar {
-            background: #2e2e2e;
-            border-right: 2px solid #4e4e4e;
-        }
-
-        .stChatInput {
-            background-color: #FFEB3B !important;
-            border-radius: 10px;
-            padding: 10px;
-        }
-
-        .stChatInput input {
-            background-color: #FFEB3B !important;
-            color: #004d40 !important;
-            border-radius: 5px;
-            padding: 10px;
-        }
-
-        .stChatInput div {
-            background-color: #FFEB3B !important;
-            border-radius: 5px;
-            padding: 10px;
-        }
-
-        /* Dark mode footer styling */
-        [data-testid="stFooter"] {
-            background: #2e2e2e;  /* Dark footer background */
-            color: #e0e0e0;  /* Footer text color */
-        }
-    }
-</style>
-    """,
-    unsafe_allow_html=True
-)
     st.title("Interviewer ChatBot AI")
 
     # === Sidebar ===
@@ -252,12 +208,13 @@ def main():
             - Supports continuous back-and-forth practice
         """)
 
-        if st.button("Clear Chat"):
+        if st.button("Reset Interview", type="primary"):
+            reset_all_states()
+            # Initialize new chat
             st.session_state.messages = [
-                {"role": "assistant", "content": "Ask me anything to start your interview practice!"}
+                {"role": "assistant", "content": "Let's start a new interview session!"}
             ]
-            st.session_state.current_question = None
-            st.session_state.asked_questions = set()
+            st.rerun()
 
     # Initialize session state
     if "messages" not in st.session_state:
@@ -269,20 +226,45 @@ def main():
     if "asked_questions" not in st.session_state:
         st.session_state.asked_questions = set()
 
-    # Resume and Job Description Uploads
-    resume_file = st.file_uploader("Upload Your Resume (PDF)", type="pdf")
-    job_description_file = st.file_uploader("Upload Job Description (PDF)", type="pdf")
+    if "questions_asked" not in st.session_state:
+        st.session_state.questions_asked = 0
+    
+    if "user_responses" not in st.session_state:
+        st.session_state.user_responses = []
+
+    # Add this to session state initialization
+    if "interview_completed" not in st.session_state:
+        st.session_state.interview_completed = False
+
+    # File uploaders
+    resume_file = st.file_uploader("Upload Your Resume (PDF)", type="pdf", key="resume_uploader")
+    job_description_file = st.file_uploader("Upload Job Description (PDF)", type="pdf", key="jd_uploader")
+
+    # Store the uploaded files in session state
+    if resume_file is not None:
+        st.session_state.resume_file = resume_file
+    if job_description_file is not None:
+        st.session_state.job_description_file = job_description_file
 
     resume_text = ""
     job_description_text = ""
 
+    # Process uploaded files
     if resume_file:
         resume_text = extract_text_from_pdf(resume_file)
         st.success("Resume uploaded and extracted successfully!")
+    elif 'resume_file' in st.session_state:
+        # Seek to beginning of file before reading
+        st.session_state.resume_file.seek(0)
+        resume_text = extract_text_from_pdf(st.session_state.resume_file)
 
     if job_description_file:
         job_description_text = extract_text_from_pdf(job_description_file)
         st.success("Job description uploaded and extracted successfully!")
+    elif 'job_description_file' in st.session_state:
+        # Seek to beginning of file before reading
+        st.session_state.job_description_file.seek(0)
+        job_description_text = extract_text_from_pdf(st.session_state.job_description_file)
 
     # Print the extracted text to verify
     print("Job Description Text: ", job_description_text[:1000])  # Debug output
@@ -308,7 +290,7 @@ def main():
     else:
         st.warning("No text found in the job description PDF.")
 
-    # Generate an initial interview question if it's the first round
+    # Generate initial question if both files are present
     if resume_text and job_description_text and not st.session_state.current_question:
         question = generate_interview_question(job_description_text, resume_text)
         st.session_state.current_question = question
@@ -322,30 +304,63 @@ def main():
     # Continuous question handling
     def llm_function(query):
         context = st.session_state.messages
-
+        
         # Generate feedback for the user's response
         feedback = analyze_answer(query, context)
         st.session_state.messages.append({"role": "user", "content": query})
         st.session_state.messages.append({"role": "assistant", "content": feedback})
-
+        
+        # Store the response
+        st.session_state.user_responses.append({
+            "question": st.session_state.current_question,
+            "answer": query,
+            "feedback": feedback
+        })
+        
+        st.session_state.questions_asked += 1
+        
         with st.chat_message("assistant"):
             st.markdown(feedback)
-
-        # Generate a new interview question after feedback
-        question = generate_interview_question(job_description_text, resume_text)
-        st.session_state.current_question = question
-        st.session_state.messages.append({"role": "assistant", "content": st.session_state.current_question})
-
-        with st.chat_message("assistant"):
-            st.markdown(st.session_state.current_question)
+        
+        # Check if we've reached the question limit
+        if st.session_state.questions_asked >= 2:
+            # Prepare responses for final analysis
+            interview_summary = "\n\n".join([
+                f"Question {i+1}: {resp['question']}\nAnswer: {resp['answer']}\nFeedback: {resp['feedback']}"
+                for i, resp in enumerate(st.session_state.user_responses)
+            ])
+            
+            # Generate final analysis
+            final_analysis = analyze_interview_performance(interview_summary)
+            st.session_state.messages.append({"role": "assistant", "content": "Interview Complete!\n\n" + final_analysis})
+            st.session_state.interview_completed = True  # Mark interview as completed
+            
+            with st.chat_message("assistant"):
+                st.markdown("Interview Complete!\n\n" + final_analysis)
+                st.markdown("---\n**The interview session has ended. Please click 'Reset Interview' to start a new session.**")
+        else:
+            # Generate next question
+            question = generate_interview_question(job_description_text, resume_text)
+            st.session_state.current_question = question
+            st.session_state.messages.append({"role": "assistant", "content": st.session_state.current_question})
+            
+            with st.chat_message("assistant"):
+                st.markdown(st.session_state.current_question)
 
     # User input handling
-    query = st.chat_input("Your response here...")
-
-    if query:
-        with st.chat_message("user"):
-            st.markdown(query)
-        llm_function(query)
+    if not st.session_state.interview_completed:
+        query = st.chat_input("Your response here...")
+        if query:
+            with st.chat_message("user"):
+                st.markdown(query)
+            llm_function(query)
+    else:
+        # Display a disabled input box with a message
+        st.text_input(
+            "Interview completed",
+            value="Interview session has ended. Click 'Reset Interview' to start a new session.",
+            disabled=True
+        )
 
 if __name__ == "__main__":
     main()
