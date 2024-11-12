@@ -5,12 +5,19 @@ from dotenv import load_dotenv
 import fitz  # PyMuPDF
 import re
 from streamlit.components.v1 import html
+import time
+from tenacity import retry, stop_after_attempt, wait_exponential
+from datetime import datetime, timedelta
+import hashlib
+import json
+from functools import wraps
 
 # Load environment variables
 load_dotenv()
 
 genai.configure(api_key=os.environ["GEMINI_API_KEY"])
 
+# Define all your functions here
 def extract_text_from_pdf(file):
     """Extracts text from a PDF file-like object uploaded via Streamlit."""
     text = ""
@@ -22,116 +29,211 @@ def extract_text_from_pdf(file):
     print("Extracted Text: ", text[:1000])  # Only print the first 1000 characters for debugging
     return text
 
+class RateLimiter:
+    def __init__(self, calls_per_minute):
+        self.calls_per_minute = calls_per_minute
+        self.interval = 60 / calls_per_minute
+        self.last_call = 0
+
+    def __call__(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            now = time.time()
+            time_since_last_call = now - self.last_call
+            if time_since_last_call < self.interval:
+                time.sleep(self.interval - time_since_last_call)
+            self.last_call = time.time()
+            return func(*args, **kwargs)
+        return wrapper
+
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    reraise=True
+)
+@RateLimiter(calls_per_minute=5)
 def analyze_resume(resume_text, job_description=None):
     """Analyzes resume content with AI, optionally including job description."""
-    prompt = f"""
-    Analyze the following resume content:
-    {resume_text}
-    
-    Evaluate the resume based on its relevance to the job description. Focus on technical skills, relevant experience, and qualifications.
-    """
-    
-    if job_description:
-        prompt += f"\nAdditionally, evaluate it in the context of the following job description:\n{job_description}"
+    try:
+        prompt = f"""
+        Analyze the following resume content:
+        {resume_text}
+        
+        Evaluate the resume based on its relevance to the job description. Focus on technical skills, relevant experience, and qualifications.
+        """
+        
+        if job_description:
+            prompt += f"\nAdditionally, evaluate it in the context of the following job description:\n{job_description}"
 
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
-            candidate_count=1,
-            max_output_tokens=2000,
-            temperature=0.5,
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                candidate_count=1,
+                max_output_tokens=2000,
+                temperature=0.5,
+            )
         )
-    )
-    return response.text.strip()
+        return response.text.strip()
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        return "Could not analyze resume at this time. Please try again."
 
+# Add a caching mechanism
+class SimpleCache:
+    def __init__(self):
+        self.cache = {}
+    
+    def get_cache_key(self, func_name, *args):
+        # Create a unique key based on function name and arguments
+        key_parts = [func_name] + [str(arg) for arg in args]
+        key_string = json.dumps(key_parts, sort_keys=True)
+        return hashlib.md5(key_string.encode()).hexdigest()
+    
+    def get(self, func_name, *args):
+        key = self.get_cache_key(func_name, *args)
+        if key in self.cache:
+            return self.cache[key]
+        return None
+    
+    def set(self, func_name, value, *args):
+        key = self.get_cache_key(func_name, *args)
+        self.cache[key] = value
+
+# Create global instances
+cache = SimpleCache()
+rate_limiter = RateLimiter(calls_per_minute=5)  # Reduced to 5 calls per minute
+
+# Update the analyze_job_description function with caching and rate limiting
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=2, min=4, max=10),
+    reraise=True
+)
+@RateLimiter(calls_per_minute=5)
 def analyze_job_description(job_description_text):
-    """Analyzes the job description using AI with 5Ws and 1H approach and adds company background."""
-    prompt = f"""
-    Analyze the following job description using the 5Ws and 1H framework:
-    - Who is the ideal candidate for this role?
-    - What are the key responsibilities and qualifications?
-    - When and where will the role be performed?
-    - Why is this role important to the company?
-    - How should the candidate approach the tasks or challenges outlined in the description?
+    """Analyzes the job description using AI with 5Ws and 1H approach."""
+    # Check cache first
+    cached_result = cache.get('analyze_job_description', job_description_text)
+    if cached_result:
+        return cached_result
 
-    Additionally, if the company name is mentioned, provide a brief background on the company.
+    # Check rate limit
+    if not rate_limiter.can_make_call():
+        st.warning("Rate limit reached. Please wait a moment...")
+        time.sleep(10)  # Force wait for 10 seconds
+        return "Please wait a moment before analyzing the job description."
 
-    Job description:
-    {job_description_text}
-    """
-    
-    model = genai.GenerativeModel("gemini-1.5-flash")
+    try:
+        prompt = f"""
+        Analyze the following job description using the 5Ws and 1H framework:
+        - Who is the ideal candidate for this role?
+        - What are the key responsibilities and qualifications?
+        - When and where will the role be performed?
+        - Why is this role important to the company?
+        - How should the candidate approach the tasks or challenges outlined in the description?
 
-    # Debugging: print the prompt to ensure it's being created correctly
-    print("Job Description Analysis Prompt: ", prompt[:1000])
-    
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
-            candidate_count=1,
-            max_output_tokens=2000,
-            temperature=0.5,
+        Additionally, if the company name is mentioned, provide a brief background on the company.
+
+        Job description:
+        {job_description_text}
+        """
+        
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                candidate_count=1,
+                max_output_tokens=2000,
+                temperature=0.5,
+            )
         )
-    )
-    return response.text.strip()
+        result = response.text.strip()
+        
+        # Cache the result
+        cache.set('analyze_job_description', result, job_description_text)
+        return result
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        return "Could not analyze job description at this time. Please try again in a few moments."
 
 def extract_keywords(text):
     """extract keywords from text"""
     keywords = re.findall(r'\b\w+\b', text.lower())
     return keywords
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    reraise=True
+)
+@RateLimiter(calls_per_minute=5)
 def generate_interview_question(job_description_text, resume_text):
     """Generate an interview question based on job description and resume"""
-    prompt = f"""
-    You are an experienced HR interviewer. Generate a concise and relevant interview question based on the following job description and candidate's resume:
-    
-    Job Description: {job_description_text}
-    Candidate Resume: {resume_text}
+    try:
+        prompt = f"""
+        You are an experienced HR interviewer. Generate a concise and relevant interview question based on the following job description and candidate's resume:
+        
+        Job Description: {job_description_text}
+        Candidate Resume: {resume_text}
 
-    Ensure the question targets the candidate's skills or experience as mentioned in the job description. The interview question from simple to complex. 
-    The interview Generated Interview Questionuestion should not be too long. 
-    """
-    
-    model = genai.GenerativeModel("gemini-1.5-flash")
-    
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
-            candidate_count=1,
-            max_output_tokens=150,
-            temperature=0.5,
+        Ensure the question targets the candidate's skills or experience as mentioned in the job description. The interview question from simple to complex. 
+        The interview Generated Interview Questionuestion should not be too long. 
+        """
+        
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                candidate_count=1,
+                max_output_tokens=150,
+                temperature=0.5,
+            )
         )
-    )
-    return response.text.strip()
+        return response.text.strip()
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        return "Could not generate a question at this time. Please try again."
 
 # ====Response to User Answer====
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    reraise=True
+)
+@RateLimiter(calls_per_minute=5)
 def analyze_answer(query, context):
     """Generate feedback based on user's response to the interview question"""
-    prompt = f"""
-    You are an experienced HR interviewer. The user's response to the interview question is below. 
-    "Evaluate the user's response based on relevance, clarity, technical accuracy, communication skills, and problem-solving skills. "
-    "If the response is irrelevant, unclear, or nonsensical, acknowledge that the response doesn't address the question and encourage the user to focus on the relevant aspects. "
-    "Provide tips or example better answer on how to answer the question effectively, such as asking for specific examples or encouraging the use of a structured response. "
-    "If the response is incorrect, provide a correct or theoretical answer and explain why the user's response was lacking or incorrect. "
-    "If the response is correct, suggest ways to improve the answer by elaborating on key points, adding more examples, or offering alternative ways to present the information more clearly."
+    try:
+        prompt = f"""
+        You are an experienced HR interviewer. The user's response to the interview question is below. 
+        "Evaluate the user's response based on relevance, clarity, technical accuracy, communication skills, and problem-solving skills. "
+        "If the response is irrelevant, unclear, or nonsensical, acknowledge that the response doesn't address the question and encourage the user to focus on the relevant aspects. "
+        "Provide tips or example better answer on how to answer the question effectively, such as asking for specific examples or encouraging the use of a structured response. "
+        "If the response is incorrect, provide a correct or theoretical answer and explain why the user's response was lacking or incorrect. "
+        "If the response is correct, suggest ways to improve the answer by elaborating on key points, adding more examples, or offering alternative ways to present the information more clearly."
 
-    Interview Question: {context[-2]['content']}
-    User's Response: {query}
-    """
+        Interview Question: {context[-2]['content']}
+        User's Response: {query}
+        """
 
-    model = genai.GenerativeModel("gemini-1.5-flash")
-
-    response = model.generate_content(
-        prompt,
-        generation_config=genai.types.GenerationConfig(
-            candidate_count=1,
-            max_output_tokens=1000,
-            temperature=0.5,
+        model = genai.GenerativeModel("gemini-1.5-flash")
+        
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.types.GenerationConfig(
+                candidate_count=1,
+                max_output_tokens=1000,
+                temperature=0.5,
+            )
         )
-    )
-    return response.text.strip()
+        return response.text.strip()
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+        return "I apologize, but I'm currently experiencing high traffic. Please try again in a few moments."
 
 def analyze_interview_performance(responses):
     """Analyzes overall interview performance and provides a summary with score"""
@@ -310,6 +412,16 @@ def set_theme():
     """
     st.markdown(css, unsafe_allow_html=True)
 
+# Create a global rate limiter
+rate_limiter = RateLimiter(calls_per_minute=10)
+
+# Use it in your API calls
+def make_api_call():
+    if not rate_limiter.can_make_call():
+        st.error("Rate limit exceeded. Please wait a moment before trying again.")
+        return None
+    # Make your API call here
+
 def main():
     st.set_page_config(page_title="Interviewer ChatBot AI (Interviewer Mode)", page_icon="🤖", layout="wide")
     set_theme()
@@ -338,7 +450,7 @@ def main():
         )
         
         if mode == "Practice Mode":
-            st.switch_page("practice_mode.py")
+            st.switch_page("pages/practice_mode.py")
         
         # Reset button
         if st.button("Reset Interview", type="secondary", use_container_width=True):
@@ -456,40 +568,18 @@ def main():
     def llm_function(query):
         context = st.session_state.messages
         
-        # Generate feedback for the user's response
-        feedback = analyze_answer(query, context)
-        st.session_state.messages.append({"role": "user", "content": query})
-        st.session_state.messages.append({"role": "assistant", "content": feedback})
-        
-        # Store the response
-        st.session_state.user_responses.append({
-            "question": st.session_state.current_question,
-            "answer": query,
-            "feedback": feedback
-        })
-        
-        st.session_state.questions_asked += 1
-        
-        with st.chat_message("assistant"):
-            st.markdown(feedback)
-        
-        # Changed from 2 to 5 questions
-        if st.session_state.questions_asked >= 5:  # Modified this line
-            # Prepare responses for final analysis
-            interview_summary = "\n\n".join([
-                f"Question {i+1}: {resp['question']}\nAnswer: {resp['answer']}\nFeedback: {resp['feedback']}"
-                for i, resp in enumerate(st.session_state.user_responses)
-            ])
-            
-            # Generate final analysis
-            final_analysis = analyze_interview_performance(interview_summary)
-            st.session_state.messages.append({"role": "assistant", "content": "Interview Complete!\n\n" + final_analysis})
-            st.session_state.interview_completed = True
+        try:
+            # Generate feedback for the user's response
+            feedback = analyze_answer(query, context)
+            st.session_state.messages.append({"role": "user", "content": query})
+            st.session_state.messages.append({"role": "assistant", "content": feedback})
             
             with st.chat_message("assistant"):
-                st.markdown("Interview Complete!\n\n" + final_analysis)
-                st.markdown("---\n**The interview session has ended. Please click 'Reset Interview' to start a new session.**")
-        else:
+                st.markdown(feedback)
+            
+            # Add a small delay before generating the next question
+            time.sleep(2)
+            
             # Generate next question
             question = generate_interview_question(job_description_text, resume_text)
             st.session_state.current_question = question
@@ -497,6 +587,8 @@ def main():
             
             with st.chat_message("assistant"):
                 st.markdown(st.session_state.current_question)
+        except Exception as e:
+            st.error("An error occurred. Please wait a moment and try again.")
 
     # User input handling
     if not st.session_state.interview_completed:
