@@ -322,8 +322,8 @@ def main():
         with st.chat_message("assistant"):
             st.markdown(feedback)
         
-        # Check if we've reached the question limit
-        if st.session_state.questions_asked >= 2:
+        # Changed from 2 to 5 questions
+        if st.session_state.questions_asked >= 5:  # Modified this line
             # Prepare responses for final analysis
             interview_summary = "\n\n".join([
                 f"Question {i+1}: {resp['question']}\nAnswer: {resp['answer']}\nFeedback: {resp['feedback']}"
@@ -333,7 +333,7 @@ def main():
             # Generate final analysis
             final_analysis = analyze_interview_performance(interview_summary)
             st.session_state.messages.append({"role": "assistant", "content": "Interview Complete!\n\n" + final_analysis})
-            st.session_state.interview_completed = True  # Mark interview as completed
+            st.session_state.interview_completed = True
             
             with st.chat_message("assistant"):
                 st.markdown("Interview Complete!\n\n" + final_analysis)
