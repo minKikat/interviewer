@@ -570,6 +570,10 @@ def main():
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+    # Add counter to session state if not exists
+    if "question_counter" not in st.session_state:
+        st.session_state.question_counter = 0
+
     # Continuous question handling
     def llm_function(query):
         context = st.session_state.messages
@@ -579,9 +583,28 @@ def main():
             feedback = analyze_answer(query, context)
             st.session_state.messages.append({"role": "user", "content": query})
             st.session_state.messages.append({"role": "assistant", "content": feedback})
+            st.session_state.user_responses.append({"question": context[-2]['content'], "answer": query, "feedback": feedback})
             
             with st.chat_message("assistant"):
                 st.markdown(feedback)
+            
+            # Increment question counter
+            st.session_state.question_counter += 1
+            
+            # Check if we've reached 5 questions
+            if st.session_state.question_counter >= 5:
+                st.session_state.interview_completed = True
+                # Format responses for analysis
+                interview_summary = "\n\n".join([
+                    f"Question: {resp['question']}\nAnswer: {resp['answer']}\nFeedback: {resp['feedback']}"
+                    for resp in st.session_state.user_responses
+                ])
+                # Get final performance analysis
+                final_score = analyze_interview_performance(interview_summary)
+                st.session_state.messages.append({"role": "assistant", "content": f"Interview Complete!\n\n{final_score}"})
+                with st.chat_message("assistant"):
+                    st.markdown(f"Interview Complete!\n\n{final_score}")
+                return
             
             # Add a small delay before generating the next question
             time.sleep(2)
