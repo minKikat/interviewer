@@ -137,16 +137,105 @@ def main():
     st.markdown(
     """
     <style>
-        .main {
-            background-color: #E0F7FA; /* 淡蓝色背景 */
+    /* Apply a gradient to the entire background (html, body, and app) */
+    html, body, .stApp {
+        background: linear-gradient(to bottom right, #F0E68C, #F08080);  /* Gradient from top-left to bottom-right */
+        color: #004d40;  /* Text color */
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    /* Ensure all Streamlit containers (header, toolbar, app view) have transparent backgrounds */
+    [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stFooter"] {
+        background: transparent !important;
+    }
+
+    /* Style the sidebar background */
+    .stSidebar {
+        background: #FFDAB9;  /* Light orange color for sidebar */
+        padding: 20px;
+        border-right: 2px solid #FFAB91;
+    }
+
+    /* Style the footer to match the background */
+    [data-testid="stFooter"] {
+        background: #FFDAB9;  /* Light orange background for footer */
+        color: #004d40;  /* Footer text color */
+    }
+
+    /* Style the chat box container with background color */
+    .stChatInput {
+        background-color: #FFEB3B !important;  /* Light yellow background for chat input box */
+        border-radius: 10px;  /* Rounded corners for the chat box */
+        padding: 10px;
+        margin-top: 20px;  /* Optional: space above the chat input */
+    }
+
+    /* Customize the chat input text box */
+    .stChatInput input {
+        background-color: #FFEB3B !important;  /* Light yellow background for the input box */
+        color: #004d40 !important;  /* Text color */
+        border-radius: 5px;  /* Rounded corners for the input field */
+        padding: 10px;
+        font-size: 16px;
+        border: none;  /* Remove default border */
+    }
+
+    /* Ensure chat input box outer container background is styled */
+    .stChatInput div {
+        background-color: #FFEB3B !important;
+        border-radius: 5px;
+        padding: 10px;
+    }
+
+    /* Add a distinct background color for the main content area */
+    .stContainer {
+        background-color: #FFF0E1;  /* Light peach color for content area */
+        border-radius: 10px;
+        padding: 20px;
+        margin-top: 20px;
+    }
+
+    /* Dark Mode Styling */
+    @media (prefers-color-scheme: dark) {
+        html, body, .stApp {
+            background: linear-gradient(to bottom right, #2e2e2e, #1e1e1e);  /* Dark gradient */
+            color: #e0e0e0;  /* Light text color */
         }
-        .css-1kyxreq {
-            background-color: #E0F7FA; /* 调整聊天框的背景颜色 */
+        .stSidebar {
+            background: #2e2e2e;
+            border-right: 2px solid #4e4e4e;
         }
-        .stMarkdown {
-            color: #000080; /* 深蓝色文字 */
+
+        .stChatInput {
+            background-color: #FFEB3B !important;
+            border-radius: 10px;
+            padding: 10px;
         }
-    </style>
+
+        .stChatInput input {
+            background-color: #FFEB3B !important;
+            color: #004d40 !important;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        .stChatInput div {
+            background-color: #FFEB3B !important;
+            border-radius: 5px;
+            padding: 10px;
+        }
+
+        /* Dark mode footer styling */
+        [data-testid="stFooter"] {
+            background: #2e2e2e;  /* Dark footer background */
+            color: #e0e0e0;  /* Footer text color */
+        }
+    }
+</style>
     """,
     unsafe_allow_html=True
 )
