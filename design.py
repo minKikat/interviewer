@@ -137,51 +137,6 @@ def main():
     st.markdown(
     """
     <style>
-<<<<<<< HEAD
-        /* General Background */
-        .stApp {
-            background-color: var(--background-color, #f0f4c3);
-        }
-
-        /* Chat Message Background */
-        .stChatMessage {
-            background-color: var(--chat-background-color, #fff3e0);
-            border-radius: 8px;
-            padding: 10px;
-            margin: 10px 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            color: var(--text-color, #004d40);
-        }
-
-        /* Input Field */
-        .stTextInput {
-            border: 2px solid #ffab91;
-            border-radius: 8px;
-            padding: 8px;
-            color: var(--text-color, #004d40);
-        }
-
-        /* Title Text */
-        .stMarkdown h1 {
-            color: var(--title-color, #00796b);
-        }
-
-        /* Chat Text */
-        .stMarkdown p {
-            color: var(--text-color, #004d40);
-        }
-
-        /* Dark Mode Styling */
-        @media (prefers-color-scheme: dark) {
-            .stApp {
-                --background-color: #1e1e1e;
-                --chat-background-color: #2e2e2e;
-                --text-color: #e0e0e0;
-                --title-color: #80cbc4;
-            }
-        }
-    </style>
-=======
     /* Apply a gradient to the entire background (html, body, and app) */
     html, body, .stApp {
         background: linear-gradient(to bottom right, #F0E68C, #F08080);  /* Gradient from top-left to bottom-right */
@@ -208,7 +163,7 @@ def main():
     /* Style the footer to match the background */
     [data-testid="stFooter"] {
         background: #FFDAB9;  /* Light orange background for footer */
-        color: #004d40;  /* Footer text color */
+        color: #;  004d40/* Footer text color */
     }
 
     /* Style the chat box container with background color */
@@ -281,7 +236,6 @@ def main():
         }
     }
 </style>
->>>>>>> bbd27af0317847fce6a6ac82dcdfc180e66be252
     """,
     unsafe_allow_html=True
 )
