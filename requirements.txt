@@ -3,3 +3,4 @@ openai
 python-dotenv
 google-generativeai
 PyMuPDF
+google-cloud
