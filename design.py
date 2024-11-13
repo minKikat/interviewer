@@ -163,7 +163,7 @@ def main():
     /* Style the footer to match the background */
     [data-testid="stFooter"] {
         background: #FFDAB9;  /* Light orange background for footer */
-        color: #004d40;  /* Footer text color */
+        color: #;  004d40/* Footer text color */
     }
 
     /* Style the chat box container with background color */
